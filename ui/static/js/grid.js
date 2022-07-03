@@ -1,7 +1,7 @@
 const weatherButton = document.getElementById('weatherButton')
 const weatgerUrl = '/get-weather'
 var canv = document.getElementById('grid'),
-ctx = canv.getContext('2d');
+    ctx = canv.getContext('2d');
 canv.width = window.innerWidth / 2
 canv.height = window.innerHeight / 1.5
 var forest = [], //2d массив ячеек 
@@ -16,8 +16,11 @@ var direction = {
 }
 let result
 
-inpFlag = false
+var decdTree = document.getElementById('deciduous_tree')
+var fire = document.getElementById('fire')
+var burntTree = document.getElementById('burnt_tree')
 
+/* НАЧАЛО ВЫПОЛНЕНИЯ МОДЕЛИ */
 weatherButton.addEventListener('click', function () {
     const windDirection = document.getElementsByName('windDirection')
     const windSpeed = document.getElementById('windSpeed')
@@ -58,19 +61,13 @@ weatherButton.addEventListener('click', function () {
         }).catch((error) => {
             console.log(error)
         })
-        inpFlag = true
     }
 })
 
 function run() {
-
     /* НАСТРОЙКА ПОЛЯ ДЛЯ ОТРИСОВКИ */
     canv.width = window.innerWidth / 2
     canv.height = window.innerHeight / 1.5
-
-    var decdTree = document.getElementById('deciduous_tree')
-    var fire = document.getElementById('fire')
-    var burntTree = document.getElementById('burnt_tree')
 
     //структура, определяющая ветер
     wind = {
@@ -93,7 +90,91 @@ function run() {
             break
     }
 
-    /* ФОРМИРОВАНИЕ ЛЕСА */ 
+    drawForest()
+
+    var testFlag = true
+
+    /* ПРОЦЕСС РАЗГОРАНИЯ ПОЖАРА */
+    var interval = 1000
+
+    var c = true //флаг ожидания начала пожара
+    var intervalId = setInterval(function () {
+        //копирования списка ячеек
+        var forestCopy = []
+        for (var i = 0; i < rows; i++) {
+            forestCopy[i] = []
+            for (var j = 0; j < cols; j++) {
+                forestCopy[i][j] = {}
+                var tree = forest[i][j]
+                var copyTree = forestCopy[i][j]
+                //копирование объекта
+                for (var key in tree) {
+                    copyTree[key] = tree[key]
+                }
+            }
+        }
+
+        //распространение пожара на одну итерацию
+        for (var i = 0; i < rows; i++) {
+            for (var j = 0; j < cols; j++) {
+                var tr = forestCopy[i][j]
+                if (tr.isBurning == true && tr.cellColor == 'yellow') {
+                    bunrTree(tr)
+
+                    if (testFlag) {
+                        var sp = wind.speed
+                        wind.speed = 0
+                        bunrTree(tr)
+                        wind.speed = sp
+                    }
+                }
+                testFlag = false
+                if (Math.ceil(Math.random() * wind.speed * 90) < wind.speed / 2) {
+                    testFlag = true
+                }
+            }
+        }
+
+        //проверка на конце пожара
+        var f = true
+        for (var i = 0; i < rows; i++) {
+            for (var j = 0; j < cols; j++) {
+                if (forest[i][j].cellColor == 'yellow' || c) {
+                    f = false
+                    break
+                }
+            }
+        }
+
+        if (f) {
+            alert('пожар закончился')
+            clearInterval(intervalId)
+        }
+    }, interval)
+
+    //созникновение очага пожара по нажатию кнопки мыши
+    canv.addEventListener('mousedown', function (e) {
+        var indent = 0
+        var dimension = 25
+        var coords = getCursorPosition(canv, e)
+        for (var i = 0; i < rows; i++) {
+            for (var j = 0; j < cols; j++) {
+                var tree = forest[i][j]
+                var X = indent + tree.coordX * dimension
+                var Y = indent + tree.coordY * dimension
+                if (coords.x >= X && coords.x <= X + dimension && coords.y >= Y && coords.y <= Y + dimension) {
+                    bunrTree(tree)
+                    c = false
+                }
+            }
+        }
+
+        ctx.fill()
+    });
+}
+
+//формирование леса
+function drawForest() {
     for (var i = 0; i < rows; i++) {
         forest[i] = []
         for (var j = 0; j < cols; j++) {
@@ -138,96 +219,7 @@ function run() {
             forest[i][j] = tree
         }
     }
-
-    var testFlag = true
-    var testCounter = 0
-
-    /* ПРОЦЕСС РАЗГОРАНИЯ ПОЖАРА */
-    var interval = 1000
-    if (wind.speed < 500 && wind.speed >= 0) {
-        var interval = 1000 - wind.speed * 20 //интервал итераций в нс
-    } else {
-        alert('ветер слишком быстрый')
-    }
-
-    var c = true //флаг ожидания начала пожара
-    var intervalId = setInterval(function () {
-        //копирования списка ячеек
-        var forestCopy = []
-        for (var i = 0; i < rows; i++) {
-            forestCopy[i] = []
-            for (var j = 0; j < cols; j++) {
-                forestCopy[i][j] = {}
-                var tree = forest[i][j]
-                var copyTree = forestCopy[i][j]
-                //копирование объекта
-                for (var key in tree) {
-                    copyTree[key] = tree[key]
-                }
-            }
-        }
-
-        //распространение пожара на одну итерацию
-        for (var i = 0; i < rows; i++) {
-            for (var j = 0; j < cols; j++) {
-                var tr = forestCopy[i][j]
-                if (tr.isBurning == true && tr.cellColor == 'yellow') {
-                    bunrTree(tr)
-
-                    if (testFlag) {
-                        var sp = wind.speed
-                        wind.speed = 0
-                        bunrTree(tr)
-                        wind.speed = sp
-                    }
-                }
-                testFlag = false
-                if (Math.ceil(Math.random() * wind.speed * 90) < wind.speed / 2) {
-                    testFlag = true
-                }
-            }
-        }
-
-        var f = true
-        for (var i = 0; i < rows; i++) {
-            for (var j = 0; j < cols; j++) {
-                if (forest[i][j].cellColor == 'yellow' || c) {
-                    f = false
-                    break
-                }
-            }
-        }
-
-        if (f) {
-            alert('пожар закончился')
-            clearInterval(intervalId)
-        }
-
-    }, interval)
-
-    //созникновение очага пожара по нажатию кнопки мыши
-    canv.addEventListener('mousedown', function (e) {
-        var indent = 0
-        var dimension = 25
-        var coords = getCursorPosition(canv, e)
-        getCursorPosition(canv, e)
-        for (var i = 0; i < rows; i++) {
-            for (var j = 0; j < cols; j++) {
-                var tree = forest[i][j]
-                var X = indent + tree.coordX * dimension
-                var Y = indent + tree.coordY * dimension
-                if (coords.x >= X && coords.x <= X + dimension && coords.y >= Y && coords.y <= Y + dimension) {
-                    bunrTree(tree)
-                    c = false
-                }
-            }
-        }
-
-        ctx.fill()
-    });
 }
-
-
 
 //"сжечь" деревья в окресности дерева (крестом +)
 //с учётом ветра (логика распространения против ветра в другом месте)
@@ -324,6 +316,7 @@ function bunrTree(tree) {
     }
 }
 
+//возвращает координаты относительно canvas
 function getCursorPosition(canvas, event) {
     const rect = canvas.getBoundingClientRect()
     const x = event.clientX - rect.left
