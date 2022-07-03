@@ -4,8 +4,11 @@
 
 {{define "main"}}
 <img id='deciduous_tree' src='/static/img/deciduous_tree.svg' style='display:none;' />
+<img id='fir' src='/static/img/fir.svg' style='display:none;' />
 <img id='fire' src='/static/img/fire_3.svg' style='display:none;' />
 <img id='burnt_tree' src='/static/img/burnt_tree.svg' style='display:none;' />
+<img id='grass' src='/static/img/grass_2.svg' style='display:none;' />
+
 <h2>Модель</h2>
 <h3>Заполните все поля и пускайте молнии в понравившиеся деревья</h3>
 <label for="windSpeed">Скорость ветра (м/c):</label>
@@ -23,6 +26,10 @@
 <label for="windDirectionWest">Запад</label>
 </p>
 <button id="weatherButton">Принять</button>
+<button id="plantTree">Посадить лиственное дерево</button>
+<button id="firTree">Посадить хвойное дерево</button>
+<button id="pourWater">Налить озерцо</button>
+
 
 <canvas id="grid">Ваш браузер не поддерживает Canvas</canvas>
 

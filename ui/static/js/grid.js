@@ -16,9 +16,39 @@ var direction = {
 }
 let result
 
+var c = true //флаг ожидания начала пожара
+
 var decdTree = document.getElementById('deciduous_tree')
 var fire = document.getElementById('fire')
 var burntTree = document.getElementById('burnt_tree')
+var grass = document.getElementById('grass')
+var fir = document.getElementById('fir')
+
+var plantTreeButton = document.getElementById('plantTree')
+var plantFlag = false
+plantTreeButton.addEventListener('click', function () {
+    waterFlag = false
+    firFlag = false
+    plantFlag = !plantFlag
+})
+
+var pourWaterButton = document.getElementById('pourWater')
+var waterFlag = false
+pourWaterButton.addEventListener('click', function () {
+    plantFlag = false
+    firFlag = false
+    waterFlag = !waterFlag
+})
+
+var firTreeBurron = document.getElementById('firTree')
+var firFlag = false
+firTreeBurron.addEventListener('click', function () {
+    waterFlag = false
+    plantFlag = false
+    firFlag = !firFlag
+})
+
+drawForest()
 
 /* НАЧАЛО ВЫПОЛНЕНИЯ МОДЕЛИ */
 weatherButton.addEventListener('click', function () {
@@ -65,9 +95,10 @@ weatherButton.addEventListener('click', function () {
 })
 
 function run() {
-    /* НАСТРОЙКА ПОЛЯ ДЛЯ ОТРИСОВКИ */
-    canv.width = window.innerWidth / 2
-    canv.height = window.innerHeight / 1.5
+    plantFlag = false
+    waterFlag = false
+    firFlag = false
+    c = true
 
     //структура, определяющая ветер
     wind = {
@@ -90,14 +121,13 @@ function run() {
             break
     }
 
-    drawForest()
+    //drawForest()
 
     var testFlag = true
 
     /* ПРОЦЕСС РАЗГОРАНИЯ ПОЖАРА */
-    var interval = 1000
+    var interval = 1000 - wind.speed * 10
 
-    var c = true //флаг ожидания начала пожара
     var intervalId = setInterval(function () {
         //копирования списка ячеек
         var forestCopy = []
@@ -135,7 +165,7 @@ function run() {
             }
         }
 
-        //проверка на конце пожара
+        //проверка на конeц пожара
         var f = true
         for (var i = 0; i < rows; i++) {
             for (var j = 0; j < cols; j++) {
@@ -151,30 +181,46 @@ function run() {
             clearInterval(intervalId)
         }
     }, interval)
+}
 
-    //созникновение очага пожара по нажатию кнопки мыши
-    canv.addEventListener('mousedown', function (e) {
-        var indent = 0
-        var dimension = 25
-        var coords = getCursorPosition(canv, e)
-        for (var i = 0; i < rows; i++) {
-            for (var j = 0; j < cols; j++) {
-                var tree = forest[i][j]
-                var X = indent + tree.coordX * dimension
-                var Y = indent + tree.coordY * dimension
-                if (coords.x >= X && coords.x <= X + dimension && coords.y >= Y && coords.y <= Y + dimension) {
-                    bunrTree(tree)
+//реакции на нажатие на ячейку
+canv.addEventListener('mousedown', function (e) {
+    var indent = 0
+    var dimension = 25
+    var coords = getCursorPosition(canv, e)
+    for (var i = 0; i < rows; i++) {
+        for (var j = 0; j < cols; j++) {
+            var tree = forest[i][j]
+            var X = indent + tree.coordX * dimension
+            var Y = indent + tree.coordY * dimension
+            if (coords.x >= X && coords.x <= X + dimension && coords.y >= Y && coords.y <= Y + dimension) {
+                if (plantFlag) {
+                    tree.cellColor = '#228b22'
+                    tree.number = getRandomArbitrary(50, 60)
+                    tree.drawCell()
+                } else if (waterFlag) {
+                    tree.cellColor = 'blue'
+                    tree.drawCell()
+                } else if (firFlag) {
+                    tree.cellColor = '#2a5c03'
+                    tree.number = getRandomArbitrary(40, 50)
+                    tree.drawCell()
+                } else {
                     c = false
+                    bunrTree(tree)
                 }
             }
         }
-
-        ctx.fill()
-    });
-}
+    }
+    ctx.fill()
+});
 
 //формирование леса
 function drawForest() {
+    /* НАСТРОЙКА ПОЛЯ ДЛЯ ОТРИСОВКИ */
+    canv.width = window.innerWidth / 2
+    canv.height = window.innerHeight / 1.5
+
     for (var i = 0; i < rows; i++) {
         forest[i] = []
         for (var j = 0; j < cols; j++) {
@@ -182,8 +228,8 @@ function drawForest() {
                 coordX: j,
                 coordY: i,
                 isBurning: false,
-                number: Math.ceil(Math.random() * 50),
-                cellColor: '#228b22',
+                number: 10, //трава //Math.ceil(Math.random() * 50),
+                cellColor: '#5da130',
                 textColor: 'black',
 
                 drawCell: function (indent = 0, dimension = 25) {
@@ -200,15 +246,21 @@ function drawForest() {
                     //     indent + dimension / 2 + this.coordY * dimension);
                     ctx.fillStyle = originalFillStyle
                     switch (this.cellColor) {
+                        case '#5da130':
+                            ctx.drawImage(grass, indent + this.coordX * dimension, indent + this.coordY * dimension, dimension, dimension)
+                            break
                         case '#228b22':
                             ctx.drawImage(decdTree, indent + this.coordX * dimension, indent + this.coordY * dimension, dimension, dimension)
-                            break;
+                            break
+                        case '#2a5c03':
+                            ctx.drawImage(fir, indent + this.coordX * dimension, indent + this.coordY * dimension, dimension, dimension)
+                            break
                         case 'yellow':
                             ctx.drawImage(fire, indent + this.coordX * dimension, indent + this.coordY * dimension, dimension, dimension)
-                            break;
+                            break
                         case 'gray':
                             ctx.drawImage(burntTree, indent + this.coordX * dimension, indent + this.coordY * dimension, dimension, dimension)
-                            break;
+                            break
                     }
                 }
             }
@@ -322,4 +374,8 @@ function getCursorPosition(canvas, event) {
     const x = event.clientX - rect.left
     const y = event.clientY - rect.top
     return { x: x, y: y }
+}
+
+function getRandomArbitrary(min, max) {
+    return Math.random() * (max - min) + min;
 }
