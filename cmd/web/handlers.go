@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"GoTest/pkg/models"
+	"encoding/json"
 	"html/template"
 	"net/http"
 	"strconv"
@@ -83,22 +84,52 @@ func (app *application) model(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app *application) createSnippet(w http.ResponseWriter, r *http.Request) {
+type WindDataInput struct {
+	Speed     string
+	Direction string
+}
+
+func (app *application) getWeather(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		app.clientError(w, http.StatusMethodNotAllowed)
 		return
 	}
 
-	w.Write([]byte("Создание новой заметки..."))
-}
+	//получение данных
+	var windInput WindDataInput
+	err := json.NewDecoder(r.Body).Decode(&windInput)
+	if err != nil {
+		app.serverError(w, err)
+	}
 
-func (app *application) showSnippet(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.URL.Query().Get("id")) //получение id из URL
-	if err != nil || id < 1 {
-		app.notFound(w)
+	//формирование ответа
+	windOutput := models.NewWind()
+	speed, err := strconv.Atoi(windInput.Speed)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+	windOutput.Speed = speed
+	//err = windOutput.SetSpeed(14)
+	// app.infoLog.Printf("speed = %d", speed)
+	// app.infoLog.Printf("windOutput.Speed = %v", windOutput.Speed)
+
+	if err != nil {
+		app.serverError(w, err)
 		return
 	}
 
-	fmt.Fprintf(w, "Отображение определенной заметки с ID %d...", id)
+	switch windInput.Direction {
+	case "North":
+		windOutput.Direction = models.North
+	case "East":
+		windOutput.Direction = models.East
+	case "South":
+		windOutput.Direction = models.South
+	case "West":
+		windOutput.Direction = models.West
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(windOutput)
 }
