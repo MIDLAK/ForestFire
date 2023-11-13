@@ -1,8 +1,101 @@
 {{template "base" .}}
- 
+
 {{define "title"}}Подробнее о пожарах{{end}}
- 
+
 {{define "main"}}
-<h2>О пожарах</h2>
-<p>Пока здесь ничего нет!</p>
+<img id='deciduous_tree' src='/static/img/deciduous_tree.svg' style='display:none;' />
+<img id='fir' src='/static/img/fir.svg' style='display:none;' />
+<img id='fire' src='/static/img/fire_3.svg' style='display:none;' />
+<img id='burnt_tree' src='/static/img/burnt_tree.svg' style='display:none;' />
+<img id='grass' src='/static/img/grass_2.svg' style='display:none;' />
+
+<h2>ЗНАЧИМЫЕ ФАКТОРЫ</h2>
+<p>
+    Моделирование лесного пожара пытается воспроизвести поведение 
+    огня в условиях растительности. На его распространение влияют следующие факторы.
+</p><br>
+<h3>Атмосферные:</h3>
+<ol class="directions">
+    <li>Скорость ветра и его направление</li>
+    <li>Температура воздуха</li>
+    <li>Влажность воздуха</li>
+    <li>Количество осадков</li>
+</ol>
+<br>
+<h3>Рельеф:</h3>
+<ol class="directions">
+    <li>Реки</li>
+    <li>Озёра</li>
+</ol>
+<br>
+<h3>Топливо: </h3>
+<ol class="directions">
+    <li>Трава</li>
+    <li>Хвойные деревья</li>
+    <li>Лиственные деревья</li>
+</ol>
+<br>
+<h3>Огнеупорность: </h3>
+<p>
+    Огнеупорностью называют свойство материала противостоять воздействию
+    высоких температур. В модели она представлена целочисленным значением,
+    показывающим, насколько долго топливо может гореть без воздействия
+    внешних факторов: трава - 10, хвойные - от 40 до 50, лиственные - от 50 до 60.
+</p>
+<br>
+<h3>Близость других горящих объектов: </h3>
+<p>
+    Топливо горит тем быстрее, чем больше горящих объектов его окружают.
+</p>
+<br>
+<br>
+<br>
+
+<h2>ОПИСАНИЕ ПОВЕДЕНИЯ</h2>
+В качестве леса выступает 2D поле, заполненное представленными видами топлива.
+От каждого горящего объекта огонь распространяется в 4 стороны, как это показано на анимации
+(нажмите "Старт" для активации).
+<br>
+<br>
+<button class="custom-btn btn-16" id="prezStart">Старт</button>
+<br>
+<div style="text-align: center">
+    <canvas id="prez_grid">Ваш браузер не поддерживает Canvas</canvas>
+</div>
+<br>
+Распространению огня может помешать водная преграда (река или озеро). В модели
+такие природные объекты обозначены синими ячейками.
+<br>
+<br>
+<button class="custom-btn btn-16" id="prezWaterStart">Старт</button>
+<br>
+<div style="text-align: center">
+    <canvas id="water_prez_grid">Ваш браузер не поддерживает Canvas</canvas>
+</div>
+<br>
+Погодные условия также оказывают влияние на распространение пламени. К примеру,
+пусть <em>западный</em> ветер <em>скоростью</em> 10 м/c направляет пожар.
+<br>
+<br>
+<button class="custom-btn btn-16" id="windTemperatureStart">Старт</button>
+<br>
+<div style="text-align: center">
+    <canvas id="wind_temperature_prez_grid">Ваш браузер не поддерживает Canvas</canvas>
+</div>
+Ниже изображён тот же самый лес, с теми же погодными условиями, 
+но при <em>температуре воздуха</em> 35 °С.
+<br>
+<div style="text-align: center">
+    <canvas id="temperature_and_wind_grid">Ваш браузер не поддерживает Canvas</canvas>
+</div>
+<br>
+Остальные атмосферные явления (<em>влажность воздуха</em> и <em>количество осадков</em>)
+замедляют скорость горения <em>топлива</em>, а после преодоления порогового значения
+и вовсе не позваляют начаться пожару.
+
+
+<script type="text/javascript" src="/static/js/forest_fire.js"></script>
+<script src="/static/js/prez_grid.js" type="text/javascript"></script>
+<script src="/static/js/water_prez_grid.js" type="text/javascript"></script>
+<script src="/static/js/wind_temperature_prez.js" type="text/javascript"></script>
 {{end}}

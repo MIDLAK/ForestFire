@@ -18,6 +18,7 @@ let result
 
 var c = true //флаг ожидания начала пожара
 
+//изображения
 var decdTree = document.getElementById('deciduous_tree')
 var fire = document.getElementById('fire')
 var burntTree = document.getElementById('burnt_tree')
@@ -50,10 +51,16 @@ firTreeBurron.addEventListener('click', function () {
 
 drawForest()
 
+var dataInput
+
 /* НАЧАЛО ВЫПОЛНЕНИЯ МОДЕЛИ */
 weatherButton.addEventListener('click', function () {
     const windDirection = document.getElementsByName('windDirection')
     const windSpeed = document.getElementById('windSpeed')
+    const airHumidity = document.getElementById('airHumidity')
+    const temperature = document.getElementById('temperature')
+    const atmosphericPrecipitation = document.getElementById('atmosphericPrecipitation')
+
     var directions = ['North', 'East', 'South', 'West']
     var direction
     //определение выбранного направления
@@ -68,9 +75,12 @@ weatherButton.addEventListener('click', function () {
     if (windSpeed.value < 0 || windSpeed.value > 200) {
         alert('Скорость ветра не должна превышать 200 м/c и быть не менее 0 м/c')
     } else {
-        var dataInput = {
+        dataInput = {
             speed: windSpeed.value,
-            direction: direction
+            direction: direction,
+            airHumidity: airHumidity.value,
+            temperature: temperature.value,
+            atmosphericPrecipitation: atmosphericPrecipitation.value
         }
         //POST завпрос на сервер
         fetch('/get-weather', {
@@ -85,7 +95,6 @@ weatherButton.addEventListener('click', function () {
             response.text().then(function (respData) {
                 result = JSON.parse(respData)
                 console.log(result)
-                console.log(result["Speed"])
                 run()
             })
         }).catch((error) => {
@@ -98,15 +107,15 @@ function run() {
     plantFlag = false
     waterFlag = false
     firFlag = false
-    c = true
+    //c = true
 
     //структура, определяющая ветер
     wind = {
-        speed: result.Speed, //скорость ветра в м/c 0 - штиль
+        speed: result.Wind.Speed, //скорость ветра в м/c 0 - штиль
         direction: direction.WEST, //направление ветра (по сторонам света)
     }
 
-    switch (result.Direction) {
+    switch (result.Wind.Direction) {
         case 1:
             wind.direction = direction.NORTH
             break
@@ -228,8 +237,8 @@ function drawForest() {
                 coordX: j,
                 coordY: i,
                 isBurning: false,
-                number: 10, //трава //Math.ceil(Math.random() * 50),
-                cellColor: '#5da130',
+                number: 10, //трава,
+                cellColor: getRandomElem(['#5da130', '#228b22', '#2a5c03']),
                 textColor: 'black',
 
                 drawCell: function (indent = 0, dimension = 25) {
@@ -248,12 +257,15 @@ function drawForest() {
                     switch (this.cellColor) {
                         case '#5da130':
                             ctx.drawImage(grass, indent + this.coordX * dimension, indent + this.coordY * dimension, dimension, dimension)
+                            this.number = 10
                             break
                         case '#228b22':
                             ctx.drawImage(decdTree, indent + this.coordX * dimension, indent + this.coordY * dimension, dimension, dimension)
+                            this.number = getRandomArbitrary(50, 60)
                             break
                         case '#2a5c03':
                             ctx.drawImage(fir, indent + this.coordX * dimension, indent + this.coordY * dimension, dimension, dimension)
+                            this.number = getRandomArbitrary(40, 50)
                             break
                         case 'yellow':
                             ctx.drawImage(fire, indent + this.coordX * dimension, indent + this.coordY * dimension, dimension, dimension)
@@ -276,33 +288,74 @@ function drawForest() {
 //"сжечь" деревья в окресности дерева (крестом +)
 //с учётом ветра (логика распространения против ветра в другом месте)
 function bunrTree(tree) {
-    ctx.fillStyle = 'gray'
-    var X = tree.coordX,
-        Y = tree.coordY;
-    var t
-    if (X < cols && Y < rows) {
-        if (X >= 0 && Y >= 0) {
-            t = forest[Y][X]
-            if (t.cellColor != 'blue') {
-                if (t.number > 0) {
-                    t.number = t.number - 1
-                    t.cellColor = 'yellow'
+    var weatherCoefficient = result.Wind.Speed + result.Temperature.DegreesCelsius
+    console.log('temp = ' + result.Temperature.DegreesCelsius + ' spd = ' + result.Wind.Speed + ' wc = ' + weatherCoefficient)
+    if (dataInput.airHumidity > 75 || dataInput.atmosphericPrecipitation > 20 || weatherCoefficient < 0) {
+        alert('Пожар не может начаться из-за погодных условий')
+    } else {
+        weatherCoefficient = Math.ceil(weatherCoefficient / 100)
+        ctx.fillStyle = 'gray'
+        var X = tree.coordX,
+            Y = tree.coordY;
+        var t
+        if (X < cols && Y < rows) {
+            if (X >= 0 && Y >= 0) {
+                t = forest[Y][X]
+                if (t.cellColor != 'blue') {
+                    t.number = t.number - (1 + weatherCoefficient)
+                    if (t.number > 0) {
+                        t.cellColor = 'yellow'
+                    } else {
+                        t.number = 0
+                        t.cellColor = 'gray'
+                    }
+                    t.isBurning = true
+                    t.drawCell()
                 } else {
-                    t.number = 0
-                    t.cellColor = 'gray'
+                    return
                 }
-                t.isBurning = true
-                t.drawCell()
-            } else {
-                return
+
+                if (Y < rows - 1) {
+                    if (wind.direction != direction.NORTH || wind.speed == 0) {
+                        t = forest[Y + 1][X]
+                        if (t.cellColor != 'blue') {
+                            t.number = t.number - (1 + weatherCoefficient)
+                            if (t.number > 0) {
+                                t.cellColor = 'yellow'
+                            } else {
+                                t.number = 0
+                                t.cellColor = 'gray'
+                            }
+                            t.isBurning = true
+                            t.drawCell()
+                        }
+                    }
+                }
+
+                if (X < cols - 1) {
+                    if (wind.direction != direction.WEST || wind.speed == 0) {
+                        t = forest[Y][X + 1]
+                        if (t.cellColor != 'blue') {
+                            t.number = t.number - (1 + weatherCoefficient)
+                            if (t.number > 0) {
+                                t.cellColor = 'yellow'
+                            } else {
+                                t.number = 0
+                                t.cellColor = 'gray'
+                            }
+                            t.isBurning = true
+                            t.drawCell()
+                        }
+                    }
+                }
             }
 
-            if (Y < rows - 1) {
-                if (wind.direction != direction.NORTH || wind.speed == 0) {
-                    t = forest[Y + 1][X]
+            if (X > 0 && Y >= 0) {
+                if (wind.direction != direction.EAST || wind.speed == 0) {
+                    t = forest[Y][X - 1]
                     if (t.cellColor != 'blue') {
+                        t.number = t.number - (1 + weatherCoefficient)
                         if (t.number > 0) {
-                            t.number = t.number - 1
                             t.cellColor = 'yellow'
                         } else {
                             t.number = 0
@@ -314,12 +367,12 @@ function bunrTree(tree) {
                 }
             }
 
-            if (X < cols - 1) {
-                if (wind.direction != direction.WEST || wind.speed == 0) {
-                    t = forest[Y][X + 1]
+            if (Y > 0 && X >= 0) {
+                if (wind.direction != direction.SOUTH || wind.speed == 0) {
+                    t = forest[Y - 1][X]
                     if (t.cellColor != 'blue') {
+                        t.number = t.number - (1 + weatherCoefficient)
                         if (t.number > 0) {
-                            t.number = t.number - 1
                             t.cellColor = 'yellow'
                         } else {
                             t.number = 0
@@ -328,40 +381,6 @@ function bunrTree(tree) {
                         t.isBurning = true
                         t.drawCell()
                     }
-                }
-            }
-        }
-
-        if (X > 0 && Y >= 0) {
-            if (wind.direction != direction.EAST || wind.speed == 0) {
-                t = forest[Y][X - 1]
-                if (t.cellColor != 'blue') {
-                    if (t.number > 0) {
-                        t.number = t.number - 1
-                        t.cellColor = 'yellow'
-                    } else {
-                        t.number = 0
-                        t.cellColor = 'gray'
-                    }
-                    t.isBurning = true
-                    t.drawCell()
-                }
-            }
-        }
-
-        if (Y > 0 && X >= 0) {
-            if (wind.direction != direction.SOUTH || wind.speed == 0) {
-                t = forest[Y - 1][X]
-                if (t.cellColor != 'blue') {
-                    if (t.number > 0) {
-                        t.number = t.number - 1
-                        t.cellColor = 'yellow'
-                    } else {
-                        t.number = 0
-                        t.cellColor = 'gray'
-                    }
-                    t.isBurning = true
-                    t.drawCell()
                 }
             }
         }
@@ -378,4 +397,8 @@ function getCursorPosition(canvas, event) {
 
 function getRandomArbitrary(min, max) {
     return Math.random() * (max - min) + min;
+}
+
+function getRandomElem(list) {
+    return list[Math.floor((Math.random() * list.length))];
 }

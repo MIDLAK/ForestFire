@@ -84,9 +84,22 @@ func (app *application) model(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type WindDataInput struct {
-	Speed     string
-	Direction string
+type WeatherDataInput struct {
+	Speed                    string
+	Direction                string
+	AirHumidity              string
+	Temperature              string
+	AtmosphericPrecipitation string
+}
+
+type OutputData struct {
+	Wind                     models.Wind
+	Temperature              models.Temperature
+	AirHumidity              models.AirHumidity
+	AtmosphericPrecipitation models.AtmosphericPrecipitation
+	TimeInterval             int
+	FireCoefficient          int
+	FireClass                int
 }
 
 func (app *application) getWeather(w http.ResponseWriter, r *http.Request) {
@@ -97,30 +110,23 @@ func (app *application) getWeather(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//получение данных
-	var windInput WindDataInput
-	err := json.NewDecoder(r.Body).Decode(&windInput)
+	var weatherInput WeatherDataInput
+	err := json.NewDecoder(r.Body).Decode(&weatherInput)
 	if err != nil {
 		app.serverError(w, err)
 	}
 
-	//формирование ответа
+	/*Получение вводных*/
+	//ветер
 	windOutput := models.NewWind()
-	speed, err := strconv.Atoi(windInput.Speed)
+	speed, err := strconv.Atoi(weatherInput.Speed)
 	if err != nil {
 		app.serverError(w, err)
 		return
 	}
 	windOutput.Speed = speed
-	//err = windOutput.SetSpeed(14)
-	// app.infoLog.Printf("speed = %d", speed)
-	// app.infoLog.Printf("windOutput.Speed = %v", windOutput.Speed)
 
-	if err != nil {
-		app.serverError(w, err)
-		return
-	}
-
-	switch windInput.Direction {
+	switch weatherInput.Direction {
 	case "North":
 		windOutput.Direction = models.North
 	case "East":
@@ -130,6 +136,59 @@ func (app *application) getWeather(w http.ResponseWriter, r *http.Request) {
 	case "West":
 		windOutput.Direction = models.West
 	}
+
+	//температура
+	temperature, err := strconv.Atoi(weatherInput.Temperature)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+	temperatureOutput := models.Temperature{
+		DegreesCelsius: temperature,
+	}
+
+	//влажность
+	humidity, err := strconv.Atoi(weatherInput.AirHumidity)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+	airHumidityOutput := models.AirHumidity{
+		Percent: humidity,
+	}
+
+	//осадки
+	precipitation, err := strconv.Atoi(weatherInput.AtmosphericPrecipitation)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+	atmosphericPrecipitationOutput := models.AtmosphericPrecipitation{
+		Millimeters: precipitation,
+	}
+
+	//погода в целом
+	weatherOutput := models.Weather{
+		Wind:                     windOutput,
+		Temperature:              temperatureOutput,
+		AirHumidity:              airHumidityOutput,
+		AtmosphericPrecipitation: atmosphericPrecipitationOutput,
+	}
+
+	/* Формирование ответа браузерной части приложения */
+	cof, class := weatherOutput.FireDangerCoefficientAndClass()
+	q, _ := atmosphericPrecipitationOutput.OverwhelmingPrecipitation(cof)
+	interval := 3000 - windOutput.Speed*100 + q*100
+	outputData := OutputData{
+		Wind:                     windOutput,
+		Temperature:              temperatureOutput,
+		AirHumidity:              airHumidityOutput,
+		AtmosphericPrecipitation: atmosphericPrecipitationOutput,
+		TimeInterval:             interval,
+		FireCoefficient:          cof,
+		FireClass:                class,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(windOutput)
+	_ = json.NewEncoder(w).Encode(outputData)
 }
