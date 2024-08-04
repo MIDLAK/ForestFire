@@ -2,6 +2,7 @@ package models
 
 import (
 	"math"
+    "errors"
 )
 
 /* Погодные условия */
@@ -12,30 +13,34 @@ type Weather struct {
 	AtmosphericPrecipitation AtmosphericPrecipitation
 }
 
-//вычисление температуры точки росы
-func (w Weather) DewPointTemperature() float64 {
-	if w.Temperature.DegreesCelsius > 0 {
-		//a, b - константные значения
-		a := 17.27
-		b := 237.7
-		T := float64(w.Temperature.DegreesCelsius)
-		RH := float64(w.AirHumidity.Percent)
+// вычисление температуры точки росы
+func (w Weather) DewPointTemperature() (float64, error) {
+	if w.Temperature.DegreesCelsius < 0 {
+		return -1000, errors.New("temperature expected > 0")
+    }
 
-		gamma := func(T float64, RH float64) float64 {
-			return a*T/(b+T) + math.Log(RH/100)
-		}
+    if w.AirHumidity.Percent < 1 || w.AirHumidity.Percent > 100 {
+        return -1000, errors.New("air humidity expected [0 ... 100]")
+    }
 
-		dewPoint := b * gamma(T, RH) / (a - gamma(T, RH))
+    // a, b - константные значения
+    a := 17.27
+    b := 237.7
+    T := float64(w.Temperature.DegreesCelsius)
+    RH := float64(w.AirHumidity.Percent)
 
-		return dewPoint
-	} else {
-		return 0
-	}
+    gamma := func(T float64, RH float64) float64 {
+        return a*T/(b+T) + math.Log(RH/100)
+    }
+
+    dewPoint := b * gamma(T, RH) / (a - gamma(T, RH))
+
+    return dewPoint, nil
 }
 
 //определение показателя пожарной опасности и класса пожарной опасности
 func (w Weather) FireDangerCoefficientAndClass() (int, int) {
-	dewPointTemperature := w.DewPointTemperature()
+	dewPointTemperature, _ := w.DewPointTemperature()
 	dryTemperature := float64(w.Temperature.DegreesCelsius)
 	sc := w.Wind.SpeedCoefficient()
 	//вычисление КП
